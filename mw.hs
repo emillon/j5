@@ -14,8 +14,9 @@ buildWiki = do
 getWriterOpts :: IO WriterOptions
 getWriterOpts = do
   htmlTemplate <- readFile "templates/html.default"
-  root <- getCurrentDirectory
-  let extraVars = [ ("css", root ++ "/css/style.css")
+  cwd <- getCurrentDirectory
+  let root = cwd ++ "/_site/"
+      extraVars = [ ("css", root ++ "/css/style.css")
                   , ("wikiroot", root ++ "/wiki/")
                   ]
   return $ addVars extraVars
@@ -32,8 +33,9 @@ conf :: HakyllConfiguration
 conf = defaultHakyllConfiguration
 
 rules :: WriterOptions -> RulesM ()
-rules = do
-  compileMarkdown
+rules opts = do
+  copyCss
+  compileMarkdown opts
 
 compileMarkdown :: WriterOptions -> Rules
 compileMarkdown wo =
@@ -45,3 +47,9 @@ compileMarkdown wo =
 pdcCompiler :: WriterOptions -> Compiler Resource (Page String)
 pdcCompiler writerOpts =
   pageCompilerWith defaultHakyllParserState writerOpts
+
+copyCss :: Rules
+copyCss =
+  void $ match (parseGlob "css/*") $ do
+    route idRoute
+    compile compressCssCompiler
