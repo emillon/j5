@@ -1,3 +1,4 @@
+import Control.Arrow
 import Control.Monad
 import Hakyll
 import System.Directory
@@ -41,14 +42,32 @@ compileMarkdown wo =
   void $ do
     match (parseGlob "wiki/**") $ do
     route $ setExtension ""
-    compile (pdcCompiler wo)
+    compile $ readPageCompiler
+          >>> expandTemplatesCompiler
+          >>> pdcCompiler wo
 
-pdcCompiler :: WriterOptions -> Compiler Resource (Page String)
+pdcCompiler :: WriterOptions -> Compiler (Page String) (Page String)
 pdcCompiler writerOpts =
-  pageCompilerWith defaultHakyllParserState writerOpts
+      addDefaultFields
+  >>> arr applySelf
+  >>> pageReadPandocWith defaultHakyllParserState
+  >>> arr (fmap (writePandocWith writerOpts))
 
 copyCss :: Rules
 copyCss =
   void $ match (parseGlob "css/*") $ do
     route idRoute
     compile compressCssCompiler
+
+expandTemplatesCompiler :: Compiler (Page String) (Page String)
+expandTemplatesCompiler =
+  arr $ \p ->
+    Page { pageMetadata = pageMetadata p
+        , pageBody = expandTemplatesStr $ pageBody p
+        }
+
+expandTemplatesStr :: String -> String
+expandTemplatesStr = id
+  -- TODO
+  -- port scripts/template_expand.pl
+  -- using Text.Regex.PCRE
