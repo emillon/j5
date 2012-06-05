@@ -22,7 +22,6 @@ getWriterOpts = do
   return $ addVars extraVars
          $ defaultWriterOptions { writerStandalone = True
                                 , writerTemplate = htmlTemplate
-                                , writerTableOfContents = True
                                 }
 
 addVars :: [(String, String)] -> WriterOptions -> WriterOptions
