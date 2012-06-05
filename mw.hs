@@ -10,7 +10,7 @@ main = buildWiki
 buildWiki :: IO ()
 buildWiki = do
   writerOpts <- getWriterOpts
-  _ <- run conf (rules writerOpts)
+  _ <- hakyll (rules writerOpts)
   return ()
 
 getWriterOpts :: IO WriterOptions
