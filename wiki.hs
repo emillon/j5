@@ -1,7 +1,10 @@
 import Data.Monoid
 import Hakyll.Core.Configuration
+import Hakyll.Core.Identifier.Pattern
+import Hakyll.Core.Routes
 import Hakyll.Core.Rules
 import Hakyll.Core.Run
+import Hakyll.Web.Page
 
 main :: IO ()
 main = buildWiki
@@ -15,4 +18,12 @@ conf :: HakyllConfiguration
 conf = defaultHakyllConfiguration
 
 rules :: RulesM ()
-rules = return ()
+rules = do
+  compileMarkdown
+
+compileMarkdown :: Rules
+compileMarkdown = do
+  _ <- match (parseGlob "src/*") $ do
+    route $ setExtension ".html"
+    compile pageCompiler
+  return ()
