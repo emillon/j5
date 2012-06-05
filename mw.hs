@@ -1,13 +1,6 @@
 import Data.Monoid
-import Hakyll.Core.Compiler
-import Hakyll.Core.Configuration
-import Hakyll.Core.Identifier.Pattern
-import Hakyll.Core.Resource
-import Hakyll.Core.Routes
-import Hakyll.Core.Rules
-import Hakyll.Core.Run
-import Hakyll.Web.Page
-import Hakyll.Web.Pandoc
+import Hakyll
+import Hakyll.Core.Run (run)
 import System.Directory
 import Text.Pandoc.Shared
 
