@@ -1,6 +1,5 @@
-import Data.Monoid
+import Control.Monad
 import Hakyll
-import Hakyll.Core.Run (run)
 import System.Directory
 import Text.Pandoc.Shared
 
@@ -10,8 +9,7 @@ main = buildWiki
 buildWiki :: IO ()
 buildWiki = do
   writerOpts <- getWriterOpts
-  _ <- hakyll (rules writerOpts)
-  return ()
+  hakyll $ rules writerOpts
 
 getWriterOpts :: IO WriterOptions
 getWriterOpts = do
@@ -20,11 +18,15 @@ getWriterOpts = do
   let extraVars = [ ("css", root ++ "/css/style.css")
                   , ("wikiroot", root ++ "/wiki/")
                   ]
-  return $ defaultWriterOptions { writerStandalone = True
+  return $ addVars extraVars
+         $ defaultWriterOptions { writerStandalone = True
                                 , writerTemplate = htmlTemplate
                                 , writerTableOfContents = True
-                                , writerVariables = extraVars ++ writerVariables defaultWriterOptions
                                 }
+
+addVars :: [(String, String)] -> WriterOptions -> WriterOptions
+addVars vars opts =
+  opts { writerVariables = vars ++ writerVariables opts }
 
 conf :: HakyllConfiguration
 conf = defaultHakyllConfiguration
@@ -34,11 +36,11 @@ rules = do
   compileMarkdown
 
 compileMarkdown :: WriterOptions -> Rules
-compileMarkdown wo = do
-  _ <- match (parseGlob "wiki/*") $ do
+compileMarkdown wo =
+  void $ do
+    match (parseGlob "wiki/*") $ do
     route $ setExtension ".html"
     compile (pdcCompiler wo)
-  return ()
 
 pdcCompiler :: WriterOptions -> Compiler Resource (Page String)
 pdcCompiler writerOpts =
