@@ -8,7 +8,7 @@ import Hakyll.Core.Rules
 import Hakyll.Core.Run
 import Hakyll.Web.Page
 import Hakyll.Web.Pandoc
-
+import System.Directory
 import Text.Pandoc.Shared
 
 main :: IO ()
@@ -21,7 +21,17 @@ buildWiki = do
   return ()
 
 getWriterOpts :: IO WriterOptions
-getWriterOpts = return defaultWriterOptions
+getWriterOpts = do
+  htmlTemplate <- readFile "templates/html.default"
+  root <- getCurrentDirectory
+  let extraVars = [ ("css", root ++ "/css/style.css")
+                  , ("wikiroot", root ++ "/wiki/")
+                  ]
+  return $ defaultWriterOptions { writerStandalone = True
+                                , writerTemplate = htmlTemplate
+                                , writerTableOfContents = True
+                                , writerVariables = extraVars ++ writerVariables defaultWriterOptions
+                                }
 
 conf :: HakyllConfiguration
 conf = defaultHakyllConfiguration
