@@ -40,8 +40,8 @@ rules opts = do
 compileMarkdown :: WriterOptions -> Rules
 compileMarkdown wo =
   void $ do
-    match (parseGlob "wiki/*") $ do
     route $ setExtension ".html"
+    match (parseGlob "wiki/**") $ do
     compile (pdcCompiler wo)
 
 pdcCompiler :: WriterOptions -> Compiler Resource (Page String)
