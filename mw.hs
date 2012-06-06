@@ -1,6 +1,8 @@
+import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Data.List
+import Data.Maybe
 import Hakyll
 import System.Directory
 import Text.Pandoc.Shared
@@ -40,8 +42,7 @@ rules opts = do
 
 compileMarkdown :: WriterOptions -> Rules
 compileMarkdown wo =
-  void $ do
-    match (parseGlob "wiki/**") $ do
+  void $ match (parseGlob "wiki/**") $ do
     route $ setExtension ""
     compile $ readPageCompiler
           >>> expandTemplatesCompiler
@@ -69,24 +70,20 @@ expandTemplatesCompiler =
 
 expandTemplatesStr :: String -> String
 expandTemplatesStr =
-  onLines $ \s -> case findInlineTemplate s of
-    Nothing -> s
-    Just (t, args) ->
-      case findTemplateNamed t of
-        Nothing -> s -- TODO emit error
-        Just tf -> tf args
+  onLines $ \s -> fromMaybe s $ do
+    (t, args) <- findInlineTemplate s
+    tf <- findTemplateNamed t -- TODO emit error on failure
+    return $ tf args
 
 onLines :: (String -> String) -> String -> String
 onLines f = unlines . map f . lines
 
 findTemplateNamed :: String -> Maybe MWTemplate
 findTemplateNamed n =
-  case find (\ (m, _) -> n == m) allTemplates of
-    Nothing -> Nothing
-    Just (_, tf) -> Just tf
+  snd <$> find (\ (m, _) -> n == m) allTemplates
 
 findInlineTemplate :: String -> Maybe (String, [String])
-findInlineTemplate s = Nothing
+findInlineTemplate = const Nothing
   -- TODO
   --   - implement
   --   - what if it's not th eonly thing on current line ?
