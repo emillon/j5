@@ -90,8 +90,11 @@ findInlineTemplate :: String -> Maybe (String, [String])
 findInlineTemplate s = do
   guard $ "[!" `isPrefixOf` s
   guard $ "]"  `isSuffixOf` s
-  let tplCallStr = reverse $ drop 1 $ reverse $ drop 2 s
-      tplCall = split " " tplCallStr
+  let tplCallStr = drop 2
+               >>> reverse
+               >>> drop 1
+               >>> reverse
+      tplCall = split " " $ tplCallStr s
   headTail tplCall
 
 headTail :: [a] -> Maybe (a, [a])
