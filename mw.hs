@@ -1,5 +1,6 @@
 import Control.Arrow
 import Control.Monad
+import Data.List
 import Hakyll
 import System.Directory
 import Text.Pandoc.Shared
@@ -67,7 +68,34 @@ expandTemplatesCompiler =
         }
 
 expandTemplatesStr :: String -> String
-expandTemplatesStr = id
+expandTemplatesStr =
+  onLines $ \s -> case findInlineTemplate s of
+    Nothing -> s
+    Just (t, args) ->
+      case findTemplateNamed t of
+        Nothing -> s -- TODO emit error
+        Just tf -> tf args
+
+onLines :: (String -> String) -> String -> String
+onLines f = unlines . map f . lines
+
+findTemplateNamed :: String -> Maybe MWTemplate
+findTemplateNamed n =
+  case find (\ (m, _) -> n == m) allTemplates of
+    Nothing -> Nothing
+    Just (_, tf) -> Just tf
+
+findInlineTemplate :: String -> Maybe (String, [String])
+findInlineTemplate s = Nothing
   -- TODO
-  -- port scripts/template_expand.pl
-  -- using Text.Regex.PCRE
+  --   - implement
+  --   - what if it's not th eonly thing on current line ?
+
+type MWTemplate = [ String ] -> String
+
+allTemplates :: [(String, MWTemplate)]
+allTemplates = [("test", tplTest)]
+
+tplTest :: MWTemplate
+tplTest args =
+  "**test template** : arguments = " ++ show args
