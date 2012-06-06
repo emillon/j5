@@ -71,6 +71,17 @@ expandTemplatesCompiler =
 
 expandTemplatesStr :: String -> String
 expandTemplatesStr =
+  expandInlineTemplatesStr . expandFilterTemplatesStr
+
+-- [!name <<
+-- template input
+-- >>]
+-- TODO implement
+expandFilterTemplatesStr :: String -> String
+expandFilterTemplatesStr = id
+
+expandInlineTemplatesStr :: String -> String
+expandInlineTemplatesStr =
   onLines $ \s -> fromMaybe s $ do
     (t, args) <- findInlineTemplate s
     tf <- findTemplateNamed t -- TODO emit error on failure
