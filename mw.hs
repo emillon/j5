@@ -2,6 +2,7 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Data.List
+import Data.List.Utils
 import Data.Maybe
 import Hakyll
 import System.Directory
@@ -82,11 +83,20 @@ findTemplateNamed :: String -> Maybe MWTemplate
 findTemplateNamed n =
   snd <$> find (\ (m, _) -> n == m) allTemplates
 
+--  [!name arg0 arg1]
+-- TODO
+--   - what if it's not th eonly thing on current line ?
 findInlineTemplate :: String -> Maybe (String, [String])
-findInlineTemplate = const Nothing
-  -- TODO
-  --   - implement
-  --   - what if it's not th eonly thing on current line ?
+findInlineTemplate s = do
+  guard $ "[!" `isPrefixOf` s
+  guard $ "]"  `isSuffixOf` s
+  let tplCallStr = reverse $ drop 1 $ reverse $ drop 2 s
+      tplCall = split " " tplCallStr
+  headTail tplCall
+
+headTail :: [a] -> Maybe (a, [a])
+headTail [] = Nothing
+headTail (x:xs) = return (x, xs)
 
 type MWTemplate = [ String ] -> String
 
