@@ -1,6 +1,7 @@
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
+import Control.Monad.RWS
 import Data.List
 import Data.List.Utils
 import Data.Maybe
@@ -73,12 +74,83 @@ expandTemplatesStr :: String -> String
 expandTemplatesStr =
   expandInlineTemplatesStr . expandFilterTemplatesStr
 
+data TFState = TFState { tfsActive :: Maybe String
+                       , tfsFilterOutput :: [String]
+                       }
+
 -- [!name <<
 -- template input
 -- >>]
 -- TODO implement
 expandFilterTemplatesStr :: String -> String
-expandFilterTemplatesStr = id
+expandFilterTemplatesStr is =
+  unlines ls
+    where
+      ((), _, ls) = runRWS m () s0
+      m = mapM_ tfHandleLine $ lines is
+      s0 = TFState { tfsActive = Nothing
+                   , tfsFilterOutput = []
+                   }
+
+type TFM a = RWS () [String] TFState a
+
+tfHandleLine :: String -> TFM ()
+tfHandleLine s = do
+  activeTpl <- gets tfsActive
+  case (isStart, isEnd, activeTpl) of
+    -- normal line
+    (Nothing, False, Nothing) -> tell [s]
+    -- tf start
+    (Just tpl, False, Nothing) -> tfSetActive tpl
+    -- tf end
+    (Nothing, True, Just t) -> tfFlush t
+    -- output through filter
+    (Nothing, False, Just _) -> tfsAppendFilter s
+
+    (Just _, True, _) -> error "tfHandleLine : start and end on same line"
+    (Nothing, True, Nothing) -> error "tfHandleLine : end without start"
+    (Just _, False, Just _) -> error "tfHandleLine : nested templates"
+
+    where
+      isStart = tfExtractStart s
+      isEnd   = tfExtractEnd s
+
+      -- meh, use lenses ?
+      tfSetActive tpl = modify $ \tfs -> tfs { tfsActive = Just tpl }
+      tfSetInactive   = modify $ \tfs -> tfs { tfsActive = Nothing }
+      tfsAppendFilter os =
+        modify $ \tfs ->
+          tfs { tfsFilterOutput = tfsFilterOutput tfs ++ [os] }
+      tfsClearFilter =
+        modify $ \tfs ->
+          tfs { tfsFilterOutput = [] }
+
+      tfFlush :: String -> TFM ()
+      tfFlush tpl = do
+        let f = fromMaybe (error $ "Cannot find TF " ++ show tpl) $ findFilterTemplateNamed tpl
+        out <- gets tfsFilterOutput
+        tell $ f out
+        tfsClearFilter
+        tfSetInactive
+
+tfExtractStart :: String -> Maybe String
+tfExtractStart s = do
+  guard $ "[!" `isPrefixOf` s
+  guard $ "<<" `isSuffixOf` s
+  return $ trimSpaces $ tplCallStr 2 2 s
+
+trimSpaces :: String -> String
+trimSpaces = takeWhile $ \c -> c /= ' '
+
+tfExtractEnd :: String -> Bool
+tfExtractEnd s =
+  s == ">>]"
+
+tplCallStr :: Int -> Int -> String -> String
+tplCallStr begin end = drop begin
+         >>> reverse
+         >>> drop end
+         >>> reverse
 
 expandInlineTemplatesStr :: String -> String
 expandInlineTemplatesStr =
@@ -90,9 +162,17 @@ expandInlineTemplatesStr =
 onLines :: (String -> String) -> String -> String
 onLines f = unlines . map f . lines
 
+findAssoc :: Eq a => a -> [(a, b)] -> Maybe b
+findAssoc n l =
+  snd <$> find (\ (m, _) -> n == m) l
+
 findTemplateNamed :: String -> Maybe MWTemplate
 findTemplateNamed n =
-  snd <$> find (\ (m, _) -> n == m) allTemplates
+  findAssoc n allTemplates
+
+findFilterTemplateNamed :: String -> Maybe TFTemplate
+findFilterTemplateNamed n =
+  findAssoc n allTFTemplates
 
 --  [!name arg0 arg1]
 -- TODO
@@ -101,18 +181,14 @@ findInlineTemplate :: String -> Maybe (String, [String])
 findInlineTemplate s = do
   guard $ "[!" `isPrefixOf` s
   guard $ "]"  `isSuffixOf` s
-  let tplCallStr = drop 2
-               >>> reverse
-               >>> drop 1
-               >>> reverse
-      tplCall = split " " $ tplCallStr s
+  let tplCall = split " " $ tplCallStr 2 1 s
   headTail tplCall
 
 headTail :: [a] -> Maybe (a, [a])
 headTail [] = Nothing
 headTail (x:xs) = return (x, xs)
 
-type MWTemplate = [ String ] -> String
+type MWTemplate = [String] -> String
 
 allTemplates :: [(String, MWTemplate)]
 allTemplates = [("test", tplTest)]
@@ -120,3 +196,12 @@ allTemplates = [("test", tplTest)]
 tplTest :: MWTemplate
 tplTest args =
   "**test template** : arguments = " ++ show args
+
+type TFTemplate = [String] -> [String]
+
+tplCatn :: TFTemplate
+tplCatn =
+  zipWith (\ n s -> show n ++ " " ++ s) [1::Integer ..]
+
+allTFTemplates :: [(String, TFTemplate)]
+allTFTemplates = [("numlines", tplCatn)]
