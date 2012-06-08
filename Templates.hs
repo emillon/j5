@@ -1,12 +1,12 @@
 module Templates where
 
-import Control.Applicative
-import Control.Arrow
 import Control.Monad
 import Control.Monad.RWS
 import Data.List
 import Data.List.Utils
 import Data.Maybe
+
+import Utils
 
 expandTemplatesStr :: String -> String
 expandTemplatesStr =
@@ -32,9 +32,6 @@ expandFilterTemplatesStr is =
                    , tfsFilterOutput = []
                    }
 
-onLines :: (String -> String) -> String -> String
-onLines f = unlines . map f . lines
-
 --  [!name arg0 arg1]
 -- TODO
 --   - what if it's not the only thing on current line ?
@@ -44,16 +41,6 @@ findInlineTemplate s = do
   guard $ "]"  `isSuffixOf` s
   let tplCall = split " " $ tplCallStr 2 1 s
   headTail tplCall
-
-tplCallStr :: Int -> Int -> String -> String
-tplCallStr begin end = drop begin
-         >>> reverse
-         >>> drop end
-         >>> reverse
-
-headTail :: [a] -> Maybe (a, [a])
-headTail [] = Nothing
-headTail (x:xs) = return (x, xs)
 
 findTemplateNamed :: String -> Maybe MWTemplate
 findTemplateNamed n =
@@ -122,10 +109,6 @@ tplCatn =
 allTFTemplates :: [(String, TFTemplate)]
 allTFTemplates = [("numlines", tplCatn)]
 
-findAssoc :: Eq a => a -> [(a, b)] -> Maybe b
-findAssoc n l =
-  snd <$> find (\ (m, _) -> n == m) l
-
 findFilterTemplateNamed :: String -> Maybe TFTemplate
 findFilterTemplateNamed n =
   findAssoc n allTFTemplates
@@ -135,9 +118,6 @@ tfExtractStart s = do
   guard $ "[!" `isPrefixOf` s
   guard $ "<<" `isSuffixOf` s
   return $ trimSpaces $ tplCallStr 2 2 s
-
-trimSpaces :: String -> String
-trimSpaces = takeWhile $ \c -> c /= ' '
 
 tfExtractEnd :: String -> Bool
 tfExtractEnd s =
