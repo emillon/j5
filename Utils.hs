@@ -1,4 +1,9 @@
-module Utils where
+module Utils ( onLines
+             , biDrop
+             , unCons
+             , findAssoc
+             , trimSpaces
+             ) where
 
 import Control.Applicative
 import Control.Arrow
@@ -11,15 +16,16 @@ findAssoc n l =
 trimSpaces :: String -> String
 trimSpaces = takeWhile $ \c -> c /= ' '
 
-headTail :: [a] -> Maybe (a, [a])
-headTail [] = Nothing
-headTail (x:xs) = return (x, xs)
+unCons :: [a] -> Maybe (a, [a])
+unCons [] = Nothing
+unCons (x:xs) = return (x, xs)
 
-tplCallStr :: Int -> Int -> String -> String
-tplCallStr begin end = drop begin
-         >>> reverse
-         >>> drop end
-         >>> reverse
+biDrop :: Int -> Int -> String -> String
+biDrop begin end =
+      drop begin
+  >>> reverse
+  >>> drop end
+  >>> reverse
 
 onLines :: (String -> String) -> String -> String
 onLines f = unlines . map f . lines

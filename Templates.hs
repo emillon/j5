@@ -1,4 +1,7 @@
-module Templates where
+module Templates ( expandTemplatesStr
+                 , expandInlineTemplatesStr
+                 , expandFilterTemplatesStr
+                 ) where
 
 import Control.Monad
 import Control.Monad.RWS
@@ -39,8 +42,7 @@ findInlineTemplate :: String -> Maybe (String, [String])
 findInlineTemplate s = do
   guard $ "[!" `isPrefixOf` s
   guard $ "]"  `isSuffixOf` s
-  let tplCall = split " " $ tplCallStr 2 1 s
-  headTail tplCall
+  unCons $ split " " $ biDrop 2 1 s
 
 findTemplateNamed :: String -> Maybe MWTemplate
 findTemplateNamed n =
@@ -117,7 +119,7 @@ tfExtractStart :: String -> Maybe String
 tfExtractStart s = do
   guard $ "[!" `isPrefixOf` s
   guard $ "<<" `isSuffixOf` s
-  return $ trimSpaces $ tplCallStr 2 2 s
+  return $ trimSpaces $ biDrop 2 2 s
 
 tfExtractEnd :: String -> Bool
 tfExtractEnd s =
